@@ -13,7 +13,7 @@ The core design philosophy of this project is the **"Paranoid Masquerade Mode,"*
 
 ## 🚀 Core Features: Why This is Different
 
-| Feature                  | This Project (Paranoid Mode)                                                                                             | Traditional / Simple Scripts                                             |
+| Feature                  | This Project                                                                                              | Traditional / Simple Scripts                                             |
 | :----------------------- | :----------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------- |
 | **Browser Simulation**   | ✅ **High-Fidelity Mimicry**: Rotates browser identities & sends matching `sec-ch-ua` headers.                             | ❌ **Basic or None**: Static User-Agent, easy to fingerprint.              |
 | **Session Management**   | ✅ **Smart Keep-Alive**: Refreshes CSRF and session by simulating harmless activity.                                       | ❌ **Passive**: Cookies & tokens expire quickly.                           |
