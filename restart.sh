@@ -10,8 +10,12 @@ else
 fi
 
 while true; do
-    echo "$(date) starting"
-    $PYTHON_CMD Main.py || echo "Error running Main.py"
-    echo "$(date) Waiting"
+    echo "$(date) restarting"
+
+    pkill -f "Main.py" && echo "Killed existing Main.py process."
+
+    $PYTHON_CMD Main.py &
+    echo "$(date) started new Main.py"
+
     sleep 700
 done
