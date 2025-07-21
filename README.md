@@ -106,7 +106,7 @@ ROBLOSECURITY=PASTE_YOUR_COOKIE_VALUE_HERE
 
 5️⃣ Run the Server
 
-python your_script_name.py
+bash restart.sh
 
 The server will display the address and your unique API Key.
 
