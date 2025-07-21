@@ -19,7 +19,7 @@ The core design philosophy of this project is the **"Paranoid Masquerade Mode,"*
 | **Session Management**   | ✅ **Smart Keep-Alive**: Refreshes CSRF and session by simulating harmless activity.                                       | ❌ **Passive**: Cookies & tokens expire quickly.                           |
 | **Request Protocol**     | ✅ **Modern HTTP/2**: Uses `httpx` to match modern browser behavior.                                                       | ❌ **Outdated HTTP/1.1**.                                                  |
 | **Behavioral Pattern**   | ✅ **Human-like Pacing**: Randomized delays to mimic human reaction times.                                                 | ❌ **Instantaneous** requests at machine speed.                            |
-| **Risk Profile**         | 🔒 **Low Risk**                                                                                                          | ⚠️ **High Risk**                                                           |
+| **Risk Profile**                                          |
 📋 Features List (API Endpoints)
 
 Information
