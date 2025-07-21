@@ -1,29 +1,25 @@
-Roblox-Group-Management-API
+  
+# Roblox Group Management API (Paranoid Masquerade Edition)
 
-> A powerful, security-focused, and stealthy Roblox Group Management API written in Python.
-Runs a local web server that wraps complex Roblox group operations into simple, secure RESTful API endpoints, allowing easy automation of your group's administration.
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.7+-blue.svg" alt="Python Version">
+  <img src="https://img.shields.io/badge/Framework-FastAPI-teal.svg" alt="Framework">
+  <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License">
+</p>
 
+This is a powerful, security-focused, and stealthy Roblox Group Management API written entirely in Python. It runs a local web server that wraps complex Roblox group operations into simple, secure RESTful API endpoints, allowing for easy automation of your group's administration.
 
+The core design philosophy of this project is the **"Paranoid Masquerade Mode,"** which aims to minimize the risk of detection by Roblox's anti-bot systems by deeply emulating the behavior of a real human user browsing the site.
 
-The core design philosophy of this project is “Paranoid Masquerade Mode”, which aims to minimize the risk of detection by Roblox's anti-bot systems by deeply emulating the behavior of a real human user browsing the site.
+## 🚀 Core Features: Why This is Different
 
-
----
-
-🚀 Core Features: Why This is Different
-
-Feature	This Project (Paranoid Mode)	Traditional / Simple Scripts
-
-Browser Simulation	✅ High-Fidelity Mimicry: Rotates browser identities & sends matching sec-ch-ua headers.	❌ Basic or None: Static User-Agent, easy to fingerprint.
-Session Management	✅ Smart Keep-Alive: Refreshes CSRF and session by simulating harmless activity.	❌ Passive: Cookies & tokens expire quickly.
-Request Protocol	✅ Modern HTTP/2: Uses httpx to match modern browser behavior.	❌ Outdated HTTP/1.1.
-Behavioral Pattern	✅ Human-like Pacing: Randomized delays to mimic human reaction times.	❌ Instantaneous requests at machine speed.
-Risk Profile	🔒 Low Risk	⚠️ High Risk
-
-
-
----
-
+| Feature                  | This Project (Paranoid Mode)                                                                                             | Traditional / Simple Scripts                                             |
+| :----------------------- | :----------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------- |
+| **Browser Simulation**   | ✅ **High-Fidelity Mimicry**: Rotates browser identities & sends matching `sec-ch-ua` headers.                             | ❌ **Basic or None**: Static User-Agent, easy to fingerprint.              |
+| **Session Management**   | ✅ **Smart Keep-Alive**: Refreshes CSRF and session by simulating harmless activity.                                       | ❌ **Passive**: Cookies & tokens expire quickly.                           |
+| **Request Protocol**     | ✅ **Modern HTTP/2**: Uses `httpx` to match modern browser behavior.                                                       | ❌ **Outdated HTTP/1.1**.                                                  |
+| **Behavioral Pattern**   | ✅ **Human-like Pacing**: Randomized delays to mimic human reaction times.                                                 | ❌ **Instantaneous** requests at machine speed.                            |
+| **Risk Profile**         | 🔒 **Low Risk**                                                                                                          | ⚠️ **High Risk**                                                           |
 📋 Features List (API Endpoints)
 
 Information
