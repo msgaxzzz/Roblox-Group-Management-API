@@ -7,6 +7,7 @@ from typing import Optional, List, Union
 import asyncio
 import random
 import time
+import re
 
 import httpx
 import uvicorn
@@ -14,30 +15,13 @@ from fastapi import FastAPI, HTTPException, Depends, Request, Query, Path, Secur
 from fastapi.security import APIKeyQuery, APIKeyHeader
 from pydantic import BaseModel, Field
 from starlette.responses import JSONResponse
-from starlette.status import HTTP_401_UNAUTHORIZED, HTTP_404_NOT_FOUND
+from starlette.status import HTTP_401_UNAUTHORIZED, HTTP_403_FORBIDDEN, HTTP_404_NOT_FOUND, HTTP_429_TOO_MANY_REQUESTS
 from dotenv import load_dotenv
+from fake_useragent import UserAgent, FakeUserAgentError
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 API_KEY_FILE = "api_key.txt"
-
-BROWSER_PROFILES = [
-    {
-        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-        "sec_ch_ua": '"Google Chrome";v="123", "Not:A-Brand";v="8", "Chromium";v="123"',
-        "sec_ch_ua_platform": '"Windows"',
-    },
-    {
-        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 Edg/122.0.0.0",
-        "sec_ch_ua": '"Chromium";v="122", "Not(A:Brand";v="24", "Microsoft Edge";v="122"',
-        "sec_ch_ua_platform": '"Windows"',
-    },
-    {
-        "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-        "sec_ch_ua": '"Google Chrome";v="123", "Not:A-Brand";v="8", "Chromium";v="123"',
-        "sec_ch_ua_platform": '"macOS"',
-    }
-]
 
 def generate_api_key(length: int = 32) -> str:
     alphabet = string.ascii_letters + string.digits
@@ -67,7 +51,17 @@ class RobloxClient:
         self._cookie = cookie
         self._csrf_token: Optional[str] = None
         
-        profile = random.choice(BROWSER_PROFILES)
+        # --- Dynamic Identity Generation ---
+        try:
+            ua = UserAgent()
+            user_agent = ua.random
+        except FakeUserAgentError:
+            # Fallback in case the user-agent service is down
+            user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+            logging.warning("fake-useragent service failed. Using a fallback User-Agent.")
+            
+        client_hints = self._generate_client_hints(user_agent)
+
         self._base_headers = {
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,application/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
             'Accept-Encoding': 'gzip, deflate, br',
@@ -78,15 +72,22 @@ class RobloxClient:
             'Sec-Fetch-Site': 'none',
             'Sec-Fetch-User': '?1',
             'Upgrade-Insecure-Requests': '1',
-            'User-Agent': profile["user_agent"],
-            'Sec-Ch-Ua': profile["sec_ch_ua"],
-            'Sec-Ch-Ua-Platform': profile["sec_ch_ua_platform"],
+            'User-Agent': user_agent,
+            'Sec-Ch-Ua': client_hints["sec_ch_ua"],
+            'Sec-Ch-Ua-Platform': client_hints["sec_ch_ua_platform"],
         }
         
+        # --- Enhanced Dynamic Cookie Generation ---
+        random_past_seconds = random.randint(3600, 86400 * 3) # 1 hour to 3 days ago
+        create_timestamp = time.time() - random_past_seconds
+        create_date_str = time.strftime('%m/%d/%Y %I:%M:%S %p', time.localtime(create_timestamp))
+
         self._base_cookies = {
             ".ROBLOSECURITY": self._cookie,
-            "RBXEventTrackerV2": f"CreateDate={time.strftime('%m/%d/%Y %I:%M:%S %p')}&rbxid=&browserid={random.randint(100000000, 999999999)}",
+            "RBXEventTrackerV2": f"CreateDate={create_date_str}&rbxid=&browserid={random.randint(100000000, 999999999)}",
             "GuestData": f"UserID=-{random.randint(100000000, 999999999)}",
+            "RBXSessionTracker": f"SessionTrackerID_{secrets.token_hex(16)}",
+            "RBX-Id": str(random.randint(1000000000, 9999999999)),
         }
         
         self._last_url: Optional[str] = None
@@ -98,8 +99,37 @@ class RobloxClient:
             follow_redirects=True,
             http2=True,
         )
-        logging.info(f"RobloxClient initialized. Identity: {profile['user_agent']}")
+        logging.info(f"RobloxClient initialized with dynamic identity. User-Agent: {user_agent}")
         logging.info("Mode: Paranoid (HTTP/2, Dynamic Identity, Referer Tracking, Human Pacing, Realistic Cookies)")
+
+    def _generate_client_hints(self, user_agent: str) -> dict:
+        platform = '"Windows"'
+        if "Macintosh" in user_agent or "macOS" in user_agent:
+            platform = '"macOS"'
+        elif "Linux" in user_agent:
+            platform = '"Linux"'
+        elif "Android" in user_agent:
+            platform = '"Android"'
+        elif "iPhone" in user_agent or "iPad" in user_agent:
+            platform = '"iOS"'
+
+        chrome_version = re.search(r"Chrome/(\d+)", user_agent)
+        edge_version = re.search(r"Edg/(\d+)", user_agent)
+        firefox_version = re.search(r"Firefox/(\d+)", user_agent)
+
+        sec_ch_ua = '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"'
+        
+        if edge_version:
+            v = edge_version.group(1)
+            sec_ch_ua = f'"Not_A Brand";v="8", "Chromium";v="{v}", "Microsoft Edge";v="{v}"'
+        elif chrome_version:
+            v = chrome_version.group(1)
+            sec_ch_ua = f'"Not_A Brand";v="8", "Chromium";v="{v}", "Google Chrome";v="{v}"'
+        elif firefox_version:
+            # Firefox doesn't typically send Sec-CH-UA headers, but we can create a plausible non-value
+            sec_ch_ua = '"Not_A Brand";v="99"'
+
+        return {"sec_ch_ua": sec_ch_ua, "sec_ch_ua_platform": platform}
 
     async def close_session(self): await self._session.aclose()
 
@@ -233,23 +263,36 @@ async def get_api_key(key_from_query: str = Security(api_key_query), key_from_he
 app = FastAPI(
     title="Roblox Group Management API",
     description="The most advanced pure-Python masquerading API for Roblox group management.",
-    version="4.9.6"
+    version="4.9.9"
 )
 roblox_client = RobloxClient(ROBLOSECURITY_COOKIE)
 keep_alive_task = None
 csrf_refresher_task = None
 
 async def csrf_token_refresher():
-    await asyncio.sleep(10) 
+    await asyncio.sleep(10)
     while True:
-        sleep_duration = random.uniform(290, 310) 
+        sleep_duration = random.uniform(290, 310)
         logging.info(f"[CSRF-Refresher] Next scheduled refresh in {sleep_duration / 60:.2f} minutes.")
         await asyncio.sleep(sleep_duration)
-        try:
-            logging.info("[CSRF-Refresher] Performing scheduled CSRF token refresh.")
-            await roblox_client._get_csrf_token()
-        except Exception as e:
-            logging.error(f"[CSRF-Refresher] An unexpected error occurred during scheduled refresh: {e}", exc_info=True)
+
+        logging.info("[CSRF-Refresher] Performing scheduled CSRF token refresh.")
+        max_retries = 4
+        retry_delay = 15
+
+        for attempt in range(max_retries):
+            try:
+                await roblox_client._get_csrf_token()
+                logging.info("[CSRF-Refresher] Proactive token refresh successful.")
+                break
+            except Exception as e:
+                logging.error(f"[CSRF-Refresher] Refresh attempt {attempt + 1}/{max_retries} failed: {e}")
+                if attempt < max_retries - 1:
+                    logging.info(f"[CSRF-Refresher] Retrying in {retry_delay} seconds...")
+                    await asyncio.sleep(retry_delay)
+                    retry_delay *= 2
+                else:
+                    logging.critical("[CSRF-Refresher] All proactive refresh attempts failed. Token may be stale. The API will attempt to recover on the next necessary request.")
 
 async def _keep_alive_action_visit_home():
     logging.info("[Keep-Alive] Action: Visiting roblox.com/home")
@@ -309,24 +352,48 @@ async def shutdown_event():
 
 @app.exception_handler(RobloxAPIError)
 async def roblox_api_exception_handler(request: Request, exc: RobloxAPIError):
-    try: roblox_details = json.loads(exc.message)
-    except (json.JSONDecodeError, TypeError): roblox_details = exc.message
-    return JSONResponse(status_code=502, content={"status": "error", "detail": f"Roblox API Error: {exc.status_code}", "roblox_response": roblox_details})
+    try:
+        roblox_details = json.loads(exc.message)
+    except (json.JSONDecodeError, TypeError):
+        roblox_details = exc.message
+
+    client_status_code: int
+    if exc.status_code == 401:
+        client_status_code = HTTP_401_UNAUTHORIZED
+    elif exc.status_code == 403:
+        client_status_code = HTTP_403_FORBIDDEN
+    elif exc.status_code == 404:
+        client_status_code = HTTP_404_NOT_FOUND
+    elif exc.status_code == 429:
+        client_status_code = HTTP_429_TOO_MANY_REQUESTS
+    elif 400 <= exc.status_code < 500:
+        client_status_code = exc.status_code
+    else:
+        client_status_code = 502
+
+    logging.warning(f"Mapping Roblox API error with status {exc.status_code} to client response {client_status_code}. Details: {roblox_details}")
+
+    return JSONResponse(
+        status_code=client_status_code,
+        content={
+            "status": "error",
+            "detail": "An upstream error occurred with the Roblox API.",
+            "upstream_status": exc.status_code,
+            "roblox_response": roblox_details,
+        },
+    )
 
 async def _get_id_from_username(username: str) -> int:
     await roblox_client._human_delay()
     url = "https://users.roblox.com/v1/usernames/users"
     payload = {"usernames": [username], "excludeBannedUsers": True}
     logging.info(f"Resolving username '{username}' to ID...")
-    try:
-        response = await roblox_client.request("POST", url, json=payload)
-        if response and response.get("data") and len(response["data"]) > 0:
-            user_id = response["data"][0]["id"]
-            logging.info(f"Resolved username '{username}' to ID: {user_id}")
-            return user_id
-        raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail=f"User with username '{username}' not found.")
-    except RobloxAPIError as e:
-        raise HTTPException(status_code=502, detail=f"Failed to resolve username from Roblox API. Reason: {e.message}")
+    response = await roblox_client.request("POST", url, json=payload)
+    if response and response.get("data") and len(response["data"]) > 0:
+        user_id = response["data"][0]["id"]
+        logging.info(f"Resolved username '{username}' to ID: {user_id}")
+        return user_id
+    raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail=f"User with username '{username}' not found.")
 
 async def resolve_user_identifier(user_identifier: str = Path(..., description="The user's ID or username.")) -> int:
     if user_identifier.isdigit(): return int(user_identifier)
@@ -336,13 +403,10 @@ async def _get_group_roles(group_id: int) -> List[dict]:
     await roblox_client._human_delay()
     roles_url = f"https://groups.roblox.com/v1/groups/{group_id}/roles"
     logging.info(f"Fetching all roles for group {group_id}.")
-    try:
-        response_data = await roblox_client.request("GET", roles_url)
-        if not response_data or "roles" not in response_data:
-            raise HTTPException(status_code=502, detail="Could not retrieve roles from Roblox API, or response was malformed.")
-        return response_data["roles"]
-    except RobloxAPIError as e:
-        raise HTTPException(status_code=502, detail=f"Failed to fetch group roles from Roblox. Reason: {e.message}")
+    response_data = await roblox_client.request("GET", roles_url)
+    if not response_data or "roles" not in response_data:
+        raise HTTPException(status_code=502, detail="Could not retrieve roles from Roblox API, or response was malformed.")
+    return response_data["roles"]
 
 async def _get_user_current_role(group_id: int, user_id: int) -> dict:
     await roblox_client._human_delay()
@@ -351,7 +415,7 @@ async def _get_user_current_role(group_id: int, user_id: int) -> dict:
     try:
         response_data = await roblox_client.request("GET", url)
         if not response_data or "data" not in response_data:
-             raise HTTPException(status_code=404, detail=f"Could not retrieve role for user {user_id} in group {group_id}.")
+             raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail=f"Could not retrieve role for user {user_id} in group {group_id}. User may not be a member.")
         for group_data in response_data["data"]:
             if group_data.get("group", {}).get("id") == group_id:
                 if group_data.get("role") is None: 
@@ -360,8 +424,8 @@ async def _get_user_current_role(group_id: int, user_id: int) -> dict:
         return {"name": "Guest", "rank": 0}
     except RobloxAPIError as e:
         if e.status_code == 400:
-            raise HTTPException(status_code=404, detail=f"User with ID {user_id} does not exist.")
-        raise HTTPException(status_code=502, detail=f"Failed to fetch user's role from Roblox. Reason: {e.message}")
+            raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail=f"User with ID {user_id} likely does not exist or is invalid.")
+        raise e
 
 @app.get("/groups/{group_id}", tags=["Information"])
 async def get_group_info(group_id: int = Path(..., description="The ID of the group to query."), _=Security(get_api_key)):
@@ -794,8 +858,9 @@ async def kick_all_members(
     )
     
 if __name__ == "__main__":
-    print("--- Roblox Group Management API [Paranoid Masquerade Edition - v4.9.6] ---")
+    print("--- Roblox Group Management API [Paranoid Masquerade Edition - v4.9.9] ---")
     print("Starting server...")
+    print("Please ensure you have run 'pip install fake-useragent' for dynamic identity generation.")
     print(f"Listening on: http://0.0.0.0:{APP_PORT}")
     print(f"API Documentation available at: http://127.0.0.1:{APP_PORT}/docs")
     print(f"Your API Key is: {API_KEY}")
