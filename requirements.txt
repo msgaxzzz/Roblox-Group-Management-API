@@ -4,3 +4,4 @@ pydantic
 httpx
 python-dotenv
 httpx[http2]
+fake-useragent
